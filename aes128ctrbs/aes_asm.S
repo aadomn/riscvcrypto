@@ -652,50 +652,28 @@ AES_128_keyschedule:
 .endm
 
 //    b0: register to apply shiftrows on
-// m0-m5: masks to extract bits, const
+// m0-m1: masks for SWAPMOVE
 // r0-r1: tmp
-.macro shiftrow b0, m0,m1,m2,m3,m4,m5, r0,r1
-    andi   \r0, \b0, 0xff
-    and    \r1, \b0, \m0
-    slli   \r1, \r1, 2
-    or     \r0, \r0, \r1
-    and    \r1, \b0, \m1
-    srli   \r1, \r1, 6
-    or     \r0, \r0, \r1
-    and    \r1, \b0, \m2
-    slli   \r1, \r1, 4
-    or     \r0, \r0, \r1
-    and    \r1, \b0, \m3
-    srli   \r1, \r1, 4
-    or     \r0, \r0, \r1
-    and    \r1, \b0, \m4
-    slli   \r1, \r1, 6
-    or     \r0, \r0, \r1
-    and    \r1, \b0, \m5
-    srli   \r1, \r1, 2
-    or     \b0, \r0, \r1
+.macro shiftrow b0, m0,m1, r0
+    swapmove \b0,\b0, \b0,\b0, \m0, 4, \r0
+    swapmove \b0,\b0, \b0,\b0, \m1, 2, \r0
 .endm
 
 // b0-b7: state
 // r0-r7: tmp
-.macro shiftrows b0,b1,b2,b3,b4,b5,b6,b7, r0,r1,r2,r3,r4,r5,r6,r7
-    li     \r0, 0x00003f00
-    li     \r1, 0x0000c000
-    li     \r2, 0x000f0000
-    li     \r3, 0x00f00000
-    li     \r4, 0x03000000
-    li     \r5, 0xfc000000
+.macro shiftrows b0,b1,b2,b3,b4,b5,b6,b7, r0,r1,r2
+    li     \r0, 0x30f0c000
+    li     \r1, 0xcc00cc00
 
-    shiftrow \b0, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b1, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b2, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b3, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b4, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b5, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b6, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
-    shiftrow \b7, \r0,\r1,\r2,\r3,\r4,\r5, \r6,\r7
+    shiftrow \b0, \r0,\r1, \r2
+    shiftrow \b1, \r0,\r1, \r2
+    shiftrow \b2, \r0,\r1, \r2
+    shiftrow \b3, \r0,\r1, \r2
+    shiftrow \b4, \r0,\r1, \r2
+    shiftrow \b5, \r0,\r1, \r2
+    shiftrow \b6, \r0,\r1, \r2
+    shiftrow \b7, \r0,\r1, \r2
 .endm
-
 
 //    o0: output (can overlap with input)
 //    i0: input, const
@@ -764,7 +742,7 @@ AES_128_keyschedule:
 // r0-r17: tmp
 .macro round b0,b1,b2,b3,b4,b5,b6,b7, c0, r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,r15,r16,r17
     subbytes    \b0,\b1,\b2,\b3,\b4,\b5,\b6,\b7, \r0,\r1,\r2,\r3,\r4,\r5,\r6,\r7,\r8,\r9,\r10,\r11,\r12,\r13,\r14,\r15,\r16,\r17
-    shiftrows   \b0,\b1,\b2,\b3,\b4,\b5,\b6,\b7, \r0,\r1,\r2,\r3,\r4,\r5,\r6,\r7
+    shiftrows   \b0,\b1,\b2,\b3,\b4,\b5,\b6,\b7, \r0,\r1,\r2
     mixcolumns  \b0,\b1,\b2,\b3,\b4,\b5,\b6,\b7, \r0,\r1,\r2,\r3,\r4,\r5,\r6,\r7,\r8,\r9
     addroundkey \b0,\b1,\b2,\b3,\b4,\b5,\b6,\b7, \c0, \r0,\r1
 .endm
@@ -828,7 +806,7 @@ AES_128_encrypt_ctr:
     round       a4,a5,a6,a7,t0,t1,t2,t3, 272(a0), a1,a2,a3,t4,t5,t6,s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
     round       a4,a5,a6,a7,t0,t1,t2,t3, 304(a0), a1,a2,a3,t4,t5,t6,s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
     subbytes    a4,a5,a6,a7,t0,t1,t2,t3, a1,a2,a3,t4,t5,t6,s0,s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11
-    shiftrows   a4,a5,a6,a7,t0,t1,t2,t3, a1,a2,a3,t4,t5,t6,s0,s1
+    shiftrows   a4,a5,a6,a7,t0,t1,t2,t3, a1,a2,a3
     addroundkey a4,a5,a6,a7,t0,t1,t2,t3, 336(a0), t4,t5
 
     unbitslice  a4,a5,a6,a7,t0,t1,t2,t3, t4,t5,t6
